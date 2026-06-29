@@ -1,60 +1,769 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UAS MBD</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #f4f4f4;
-            text-align: center;
-            padding-top: 100px;
-        }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>KosKita — Dashboard Pemilik</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap');
 
-        .container {
-            background: white;
-            width: 500px;
-            margin: auto;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0,0,0,.1);
-        }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-        h1 {
-            color: #007bff;
-        }
+  :root {
+    --ink:        #0F1724;
+    --ink-muted:  #5A6478;
+    --surface:    #F7F8FC;
+    --card:       #FFFFFF;
+    --border:     #E4E8F0;
+    --teal:       #1A8C7D;
+    --teal-light: #E6F5F3;
+    --amber:      #D97706;
+    --amber-light:#FEF3C7;
+    --rose:       #E03E3E;
+    --rose-light: #FEE2E2;
+    --indigo:     #4F46E5;
+    --indigo-light:#EEF2FF;
+    --radius:     12px;
+    --shadow:     0 1px 4px rgba(0,0,0,.07), 0 4px 16px rgba(0,0,0,.06);
+  }
 
-        button {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 5px;
-            background: #007bff;
-            color: white;
-            cursor: pointer;
-        }
+  html { font-size: 15px; }
+  body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    background: var(--surface);
+    color: var(--ink);
+    min-height: 100vh;
+  }
 
-        button:hover {
-            opacity: 0.9;
-        }
-    </style>
+  /* ── SIDEBAR ── */
+  .layout { display: flex; min-height: 100vh; }
+  .sidebar {
+    width: 240px; flex-shrink: 0;
+    background: var(--ink);
+    display: flex; flex-direction: column;
+    padding: 28px 0;
+    position: sticky; top: 0; height: 100vh;
+  }
+  .brand {
+    padding: 0 24px 28px;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+  .brand-logo {
+    font-size: 1.3rem; font-weight: 800; color: #fff;
+    letter-spacing: -.5px;
+  }
+  .brand-logo span { color: var(--teal); }
+  .brand-sub { font-size: .7rem; color: rgba(255,255,255,.4); margin-top: 2px; letter-spacing: .5px; text-transform: uppercase; }
+  .nav { margin-top: 20px; flex: 1; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 24px;
+    font-size: .83rem; font-weight: 500;
+    color: rgba(255,255,255,.55);
+    cursor: pointer; transition: all .15s;
+    border-left: 3px solid transparent;
+    text-decoration: none;
+  }
+  .nav-item.active, .nav-item:hover {
+    color: #fff;
+    background: rgba(255,255,255,.06);
+    border-left-color: var(--teal);
+  }
+  .nav-icon { font-size: 1rem; width: 20px; text-align: center; }
+  .sidebar-footer {
+    padding: 20px 24px 0;
+    border-top: 1px solid rgba(255,255,255,.08);
+  }
+  .owner-pill {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .avatar {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: var(--teal); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .8rem; font-weight: 700; flex-shrink: 0;
+  }
+  .owner-name { font-size: .8rem; font-weight: 600; color: #fff; }
+  .owner-role { font-size: .68rem; color: rgba(255,255,255,.4); }
+
+  /* ── MAIN ── */
+  .main { flex: 1; overflow: auto; }
+  .topbar {
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 32px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 10;
+  }
+  .page-title { font-size: 1rem; font-weight: 700; }
+  .topbar-actions { display: flex; gap: 10px; align-items: center; }
+  .btn {
+    padding: 8px 16px; border-radius: 8px;
+    font-size: .78rem; font-weight: 600;
+    cursor: pointer; border: none; transition: opacity .15s;
+  }
+  .btn:hover { opacity: .85; }
+  .btn-primary { background: var(--teal); color: #fff; }
+  .btn-ghost { background: var(--surface); color: var(--ink-muted); border: 1px solid var(--border); }
+  .badge-notif {
+    width: 8px; height: 8px; background: var(--rose);
+    border-radius: 50%; position: relative;
+  }
+
+  .content { padding: 28px 32px; }
+
+  /* ── SECTION TABS ── */
+  .tabs { display: flex; gap: 6px; margin-bottom: 24px; flex-wrap: wrap; }
+  .tab {
+    padding: 7px 16px; border-radius: 8px;
+    font-size: .78rem; font-weight: 600;
+    cursor: pointer; border: 1px solid var(--border);
+    background: var(--card); color: var(--ink-muted);
+    transition: all .15s;
+  }
+  .tab.active { background: var(--ink); color: #fff; border-color: var(--ink); }
+
+  /* ── STAT CARDS ── */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+  .stat-card {
+    background: var(--card); border-radius: var(--radius);
+    padding: 20px; box-shadow: var(--shadow);
+    border-left: 4px solid transparent;
+  }
+  .stat-card.teal   { border-left-color: var(--teal); }
+  .stat-card.amber  { border-left-color: var(--amber); }
+  .stat-card.rose   { border-left-color: var(--rose); }
+  .stat-card.indigo { border-left-color: var(--indigo); }
+  .stat-label { font-size: .72rem; font-weight: 600; color: var(--ink-muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; }
+  .stat-value { font-size: 1.7rem; font-weight: 800; line-height: 1; }
+  .stat-sub { font-size: .72rem; color: var(--ink-muted); margin-top: 6px; }
+
+  /* ── GRID 2-COL ── */
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+  .grid3 { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 20px; }
+
+  /* ── CARD ── */
+  .card {
+    background: var(--card); border-radius: var(--radius);
+    box-shadow: var(--shadow); overflow: hidden;
+  }
+  .card-header {
+    padding: 18px 20px 14px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+  .card-title { font-size: .88rem; font-weight: 700; }
+  .card-body { padding: 0; }
+  .view-all { font-size: .73rem; color: var(--teal); font-weight: 600; cursor: pointer; text-decoration: none; }
+
+  /* ── TABLE ── */
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    padding: 10px 16px;
+    font-size: .7rem; font-weight: 700; color: var(--ink-muted);
+    text-transform: uppercase; letter-spacing: .4px;
+    background: var(--surface);
+    text-align: left; border-bottom: 1px solid var(--border);
+  }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--surface); }
+  td { padding: 11px 16px; font-size: .82rem; vertical-align: middle; }
+  .mono { font-family: 'DM Mono', monospace; font-size: .75rem; }
+
+  /* ── BADGE ── */
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 9px; border-radius: 99px;
+    font-size: .68rem; font-weight: 700; white-space: nowrap;
+  }
+  .badge::before { content: ''; width: 5px; height: 5px; border-radius: 50%; }
+  .badge-green  { background: var(--teal-light);   color: var(--teal);   } .badge-green::before  { background: var(--teal); }
+  .badge-amber  { background: var(--amber-light);  color: var(--amber);  } .badge-amber::before  { background: var(--amber); }
+  .badge-rose   { background: var(--rose-light);   color: var(--rose);   } .badge-rose::before   { background: var(--rose); }
+  .badge-indigo { background: var(--indigo-light); color: var(--indigo); } .badge-indigo::before { background: var(--indigo); }
+  .badge-muted  { background: var(--border);       color: var(--ink-muted); } .badge-muted::before { background: var(--ink-muted); }
+
+  /* ── ROOM GRID ── */
+  .room-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+    gap: 8px; padding: 16px;
+  }
+  .room-chip {
+    border-radius: 8px; padding: 10px 6px;
+    text-align: center; cursor: pointer;
+    border: 1.5px solid transparent;
+    transition: transform .1s, box-shadow .1s;
+    position: relative;
+  }
+  .room-chip:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.1); }
+  .room-chip.available  { background: var(--teal-light);   border-color: #9DDDD5; }
+  .room-chip.occupied   { background: var(--indigo-light); border-color: #A5B4FC; }
+  .room-chip.maintenance{ background: var(--amber-light);  border-color: #FCD34D; }
+  .room-num { font-size: .75rem; font-weight: 700; display: block; }
+  .room-status-text { font-size: .6rem; margin-top: 2px; opacity: .7; display: block; }
+  .room-price { font-size: .58rem; opacity: .65; display: block; }
+
+  /* ── MAINTENANCE LIST ── */
+  .maint-item {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 12px 16px; border-bottom: 1px solid var(--border);
+  }
+  .maint-item:last-child { border-bottom: none; }
+  .maint-icon {
+    width: 34px; height: 34px; border-radius: 8px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem;
+  }
+  .maint-icon.low    { background: var(--teal-light); }
+  .maint-icon.medium { background: var(--amber-light); }
+  .maint-icon.high   { background: var(--rose-light); }
+  .maint-title { font-size: .82rem; font-weight: 600; }
+  .maint-meta  { font-size: .72rem; color: var(--ink-muted); margin-top: 2px; }
+  .maint-right { margin-left: auto; text-align: right; flex-shrink: 0; }
+
+  /* ── LOADING SPINNER ── */
+  .spinner-wrap { display: flex; align-items: center; justify-content: center; padding: 40px; gap: 10px; color: var(--ink-muted); font-size: .82rem; }
+  .spinner { width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--teal); border-radius: 50%; animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── EMPTY STATE ── */
+  .empty { text-align: center; padding: 36px 20px; color: var(--ink-muted); font-size: .82rem; }
+  .empty-icon { font-size: 2rem; margin-bottom: 8px; }
+
+  /* ── LEGEND ── */
+  .legend { display: flex; gap: 16px; padding: 12px 16px; border-top: 1px solid var(--border); flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: .72rem; color: var(--ink-muted); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 3px; }
+  .legend-dot.available   { background: var(--teal); }
+  .legend-dot.occupied    { background: var(--indigo); }
+  .legend-dot.maintenance { background: var(--amber); }
+
+  /* ── PROPERTY SELECTOR ── */
+  .prop-select {
+    padding: 6px 10px; border-radius: 7px;
+    border: 1px solid var(--border); font-size: .78rem;
+    font-family: inherit; background: var(--surface);
+    color: var(--ink); cursor: pointer;
+  }
+
+  /* ── CURRENCY ── */
+  .currency { font-family: 'DM Mono', monospace; font-size: .8rem; }
+
+  /* ── TENANTS CARD ── */
+  .tenant-row-name { font-weight: 600; }
+  .tenant-row-id   { font-size: .7rem; color: var(--ink-muted); }
+
+  @media (max-width: 900px) {
+    .stats { grid-template-columns: repeat(2,1fr); }
+    .grid2, .grid3 { grid-template-columns: 1fr; }
+    .sidebar { display: none; }
+    .content { padding: 16px; }
+  }
+</style>
 </head>
 <body>
 
-    <div class="container">
-        <h1>UAS MBD</h1>
-        <p>Website berhasil diupload ke GitHub.</p>
+<div class="layout">
 
-        <button onclick="halo()">
-            Klik Saya
-        </button>
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-logo">Kos<span>Kita</span></div>
+      <div class="brand-sub">Portal Pemilik</div>
+    </div>
+    <nav class="nav">
+      <a class="nav-item active" onclick="showSection('overview')">
+        <span class="nav-icon">🏠</span> Overview
+      </a>
+      <a class="nav-item" onclick="showSection('rooms')">
+        <span class="nav-icon">🛏</span> Kamar
+      </a>
+      <a class="nav-item" onclick="showSection('tenants')">
+        <span class="nav-icon">👤</span> Penyewa
+      </a>
+      <a class="nav-item" onclick="showSection('payments')">
+        <span class="nav-icon">💳</span> Pembayaran
+      </a>
+      <a class="nav-item" onclick="showSection('maintenance')">
+        <span class="nav-icon">🔧</span> Perawatan
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="owner-pill">
+        <div class="avatar" id="sidebarAvatar">Z</div>
+        <div>
+          <div class="owner-name" id="sidebarName">Loading…</div>
+          <div class="owner-role">Pemilik Kos</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <div class="topbar">
+      <div class="page-title" id="pageTitle">Dashboard Overview</div>
+      <div class="topbar-actions">
+        <span style="font-size:.78rem;color:var(--ink-muted)">Properti:</span>
+        <select class="prop-select" id="propSelect" onchange="onPropertyChange()">
+          <option value="">Memuat…</option>
+        </select>
+        <button class="btn btn-ghost">🔔 <span class="badge-notif" style="display:inline-block;width:7px;height:7px;background:var(--rose);border-radius:50%;vertical-align:middle;margin-left:2px"></span></button>
+        <button class="btn btn-primary">+ Tambah Kamar</button>
+      </div>
     </div>
 
-    <script>
-        function halo() {
-            alert("Halo dari GitHub!");
-        }
-    </script>
+    <div class="content">
 
+      <!-- SECTION: OVERVIEW -->
+      <div id="sec-overview">
+        <div class="stats">
+          <div class="stat-card teal">
+            <div class="stat-label">Total Kamar</div>
+            <div class="stat-value" id="statTotal">—</div>
+            <div class="stat-sub">di properti ini</div>
+          </div>
+          <div class="stat-card indigo">
+            <div class="stat-label">Terisi</div>
+            <div class="stat-value" id="statOccupied">—</div>
+            <div class="stat-sub" id="statOccRate">tingkat hunian</div>
+          </div>
+          <div class="stat-card amber">
+            <div class="stat-label">Tagihan Tertunggak</div>
+            <div class="stat-value" id="statUnpaid">—</div>
+            <div class="stat-sub" id="statUnpaidAmt">total belum dibayar</div>
+          </div>
+          <div class="stat-card rose">
+            <div class="stat-label">Permintaan Perbaikan</div>
+            <div class="stat-value" id="statMaint">—</div>
+            <div class="stat-sub">status terbuka</div>
+          </div>
+        </div>
+
+        <div class="grid3">
+          <!-- Room map -->
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">🛏 Peta Kamar</span>
+              <a class="view-all" onclick="showSection('rooms')">Lihat semua →</a>
+            </div>
+            <div class="card-body">
+              <div id="roomMapContainer">
+                <div class="spinner-wrap"><div class="spinner"></div> Memuat kamar…</div>
+              </div>
+              <div class="legend">
+                <div class="legend-item"><div class="legend-dot available"></div> Tersedia</div>
+                <div class="legend-item"><div class="legend-dot occupied"></div> Terisi</div>
+                <div class="legend-item"><div class="legend-dot maintenance"></div> Perbaikan</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick maintenance -->
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">🔧 Perbaikan Terbaru</span>
+              <a class="view-all" onclick="showSection('maintenance')">Semua →</a>
+            </div>
+            <div class="card-body" id="maintQuickList">
+              <div class="spinner-wrap"><div class="spinner"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Unpaid payments table -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">💳 Tagihan Belum Dibayar</span>
+            <a class="view-all" onclick="showSection('payments')">Semua Tagihan →</a>
+          </div>
+          <div class="card-body">
+            <div id="unpaidTableWrap">
+              <div class="spinner-wrap"><div class="spinner"></div> Memuat pembayaran…</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION: ROOMS -->
+      <div id="sec-rooms" style="display:none">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">🛏 Daftar Kamar</span>
+          </div>
+          <div class="card-body" id="roomsTableWrap">
+            <div class="spinner-wrap"><div class="spinner"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION: TENANTS -->
+      <div id="sec-tenants" style="display:none">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">👤 Daftar Penyewa</span>
+          </div>
+          <div class="card-body" id="tenantsTableWrap">
+            <div class="spinner-wrap"><div class="spinner"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION: PAYMENTS -->
+      <div id="sec-payments" style="display:none">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">💳 Semua Tagihan Pembayaran</span>
+          </div>
+          <div class="card-body" id="paymentsTableWrap">
+            <div class="spinner-wrap"><div class="spinner"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECTION: MAINTENANCE -->
+      <div id="sec-maintenance" style="display:none">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">🔧 Semua Permintaan Perbaikan</span>
+          </div>
+          <div class="card-body" id="maintTableWrap">
+            <div class="spinner-wrap"><div class="spinner"></div></div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </main>
+</div>
+
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+  getFirestore, collection, getDocs, query, where, doc, getDoc
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAXtor9amtO_2HoWKxz46FbXxAhncJ-3J0",
+  authDomain: "koskita-app-b49eb.firebaseapp.com",
+  projectId: "koskita-app-b49eb",
+  storageBucket: "koskita-app-b49eb.firebasestorage.app",
+  messagingSenderId: "156052159506",
+  appId: "1:156052159506:web:a4a92162ba913f7e3faccb",
+  measurementId: "G-01W1H8L9Q6"
+};
+
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+
+// ── STATE ──────────────────────────────────────────────────────
+let allProperties = [];
+let currentPropId = null;
+let allRooms      = [];
+let allTenants    = [];
+let allPayments   = [];
+let allMaint      = [];
+let ownerData     = {};
+
+// ── HELPERS ────────────────────────────────────────────────────
+function fmt(n) {
+  return 'Rp ' + Number(n).toLocaleString('id-ID');
+}
+function fmtDate(ts) {
+  if (!ts) return '—';
+  if (ts.toDate) return ts.toDate().toLocaleDateString('id-ID', {day:'2-digit',month:'short',year:'numeric'});
+  return String(ts);
+}
+function statusBadge(s) {
+  const map = {
+    available:   ['badge-green',  'Tersedia'],
+    occupied:    ['badge-indigo', 'Terisi'],
+    maintenance: ['badge-amber',  'Perbaikan'],
+    paid:        ['badge-green',  'Lunas'],
+    unpaid:      ['badge-rose',   'Belum Bayar'],
+    open:        ['badge-amber',  'Terbuka'],
+    'in-progress':['badge-indigo','Dikerjakan'],
+    closed:      ['badge-muted',  'Selesai'],
+    low:         ['badge-green',  'Rendah'],
+    medium:      ['badge-amber',  'Sedang'],
+    high:        ['badge-rose',   'Tinggi'],
+  };
+  const [cls, label] = map[s] || ['badge-muted', s];
+  return `<span class="badge ${cls}">${label}</span>`;
+}
+function empty(msg='Tidak ada data.') {
+  return `<div class="empty"><div class="empty-icon">📭</div>${msg}</div>`;
+}
+
+// ── INIT ───────────────────────────────────────────────────────
+async function init() {
+  // Load owner1
+  try {
+    const snap = await getDoc(doc(db, 'owners', 'owner1'));
+    if (snap.exists()) {
+      ownerData = snap.data();
+      document.getElementById('sidebarName').textContent = ownerData.name || 'Pemilik';
+      document.getElementById('sidebarAvatar').textContent = (ownerData.name || 'P')[0].toUpperCase();
+    }
+  } catch(e) {}
+
+  // Load properties owned by owner1
+  try {
+    const propSnap = await getDocs(query(collection(db,'properties'), where('ownerId','==','owner1')));
+    propSnap.forEach(d => allProperties.push({ id: d.id, ...d.data() }));
+  } catch(e) {
+    console.error('properties:', e);
+  }
+
+  // Populate select
+  const sel = document.getElementById('propSelect');
+  sel.innerHTML = '';
+  if (allProperties.length === 0) {
+    sel.innerHTML = '<option>Tidak ada properti</option>';
+  } else {
+    allProperties.forEach(p => {
+      sel.innerHTML += `<option value="${p.id}">${p.name}</option>`;
+    });
+    currentPropId = allProperties[0].id;
+    await loadPropertyData(currentPropId);
+  }
+}
+
+window.onPropertyChange = async function() {
+  currentPropId = document.getElementById('propSelect').value;
+  await loadPropertyData(currentPropId);
+  renderCurrentSection();
+}
+
+async function loadPropertyData(propId) {
+  allRooms = []; allTenants = []; allPayments = []; allMaint = [];
+
+  await Promise.all([
+    (async () => {
+      try {
+        const snap = await getDocs(collection(db, 'properties', propId, 'rooms'));
+        snap.forEach(d => allRooms.push({ id: d.id, ...d.data() }));
+      } catch(e) { console.error('rooms:', e); }
+    })(),
+    (async () => {
+      try {
+        const snap = await getDocs(query(collection(db,'tenants'), where('PropertyId','==',propId)));
+        snap.forEach(d => allTenants.push({ id: d.id, ...d.data() }));
+      } catch(e) {
+        // fallback without filter
+        try {
+          const snap2 = await getDocs(collection(db,'tenants'));
+          snap2.forEach(d => { const dd = d.data(); if(dd.PropertyId===propId||dd.propertyId===propId) allTenants.push({id:d.id,...dd}); });
+        } catch(e2) {}
+      }
+    })(),
+    (async () => {
+      try {
+        const snap = await getDocs(query(collection(db,'payments'), where('propertyId','==',propId)));
+        snap.forEach(d => allPayments.push({ id: d.id, ...d.data() }));
+      } catch(e) {
+        try {
+          const snap2 = await getDocs(collection(db,'payments'));
+          snap2.forEach(d => { const dd = d.data(); if(dd.propertyId===propId) allPayments.push({id:d.id,...dd}); });
+        } catch(e2) {}
+      }
+    })(),
+    (async () => {
+      try {
+        const snap = await getDocs(query(collection(db,'maintenanceRequests'), where('propertyId','==',propId)));
+        snap.forEach(d => allMaint.push({ id: d.id, ...d.data() }));
+      } catch(e) {
+        try {
+          const snap2 = await getDocs(collection(db,'maintenanceRequests'));
+          snap2.forEach(d => { const dd = d.data(); if(dd.propertyId===propId) allMaint.push({id:d.id,...dd}); });
+        } catch(e2) {}
+      }
+    })(),
+  ]);
+
+  renderOverview();
+  renderRooms();
+  renderTenants();
+  renderPayments();
+  renderMaintenance();
+}
+
+// ── RENDER: OVERVIEW ───────────────────────────────────────────
+function renderOverview() {
+  const total    = allRooms.length;
+  const occupied = allRooms.filter(r => r.status === 'occupied').length;
+  const unpaidPm = allPayments.filter(p => p.status === 'unpaid');
+  const unpaidAmt= unpaidPm.reduce((s,p) => s + Number(p.amount||0), 0);
+  const openMaint= allMaint.filter(m => m.status === 'open').length;
+  const rate     = total ? Math.round(occupied/total*100) : 0;
+
+  document.getElementById('statTotal').textContent    = total;
+  document.getElementById('statOccupied').textContent = occupied;
+  document.getElementById('statOccRate').textContent  = `${rate}% tingkat hunian`;
+  document.getElementById('statUnpaid').textContent   = unpaidPm.length;
+  document.getElementById('statUnpaidAmt').textContent= fmt(unpaidAmt);
+  document.getElementById('statMaint').textContent    = openMaint;
+
+  // Room map
+  const mapEl = document.getElementById('roomMapContainer');
+  if (allRooms.length === 0) { mapEl.innerHTML = empty('Belum ada kamar.'); return; }
+  let html = '<div class="room-grid">';
+  allRooms.sort((a,b) => a.roomNumber?.localeCompare(b.roomNumber||'')).forEach(r => {
+    const s = r.status || 'available';
+    html += `<div class="room-chip ${s}" title="${r.roomNumber} — ${s}">
+      <span class="room-num">${r.roomNumber || r.id}</span>
+      <span class="room-status-text">${s==='available'?'Kosong':s==='occupied'?'Terisi':'Service'}</span>
+      <span class="room-price">${r.price ? fmt(r.price).replace('Rp ','') : ''}</span>
+    </div>`;
+  });
+  html += '</div>';
+  mapEl.innerHTML = html;
+
+  // Quick maintenance
+  const mEl = document.getElementById('maintQuickList');
+  const recent = [...allMaint].sort((a,b) => {
+    const ta = a.createdAt?.toDate?.()?.getTime?.() || 0;
+    const tb = b.createdAt?.toDate?.()?.getTime?.() || 0;
+    return tb - ta;
+  }).slice(0, 4);
+  if (!recent.length) { mEl.innerHTML = empty('Tidak ada permintaan.'); return; }
+  mEl.innerHTML = recent.map(m => {
+    const icons = { low:'🔵', medium:'🟡', high:'🔴' };
+    return `<div class="maint-item">
+      <div class="maint-icon ${m.priority||'low'}">${icons[m.priority]||'🔵'}</div>
+      <div>
+        <div class="maint-title">${m.description||'—'}</div>
+        <div class="maint-meta">Kamar ${m.roomId||'—'} · ${fmtDate(m.createdAt)}</div>
+      </div>
+      <div class="maint-right">${statusBadge(m.status||'open')}</div>
+    </div>`;
+  }).join('');
+
+  // Unpaid table
+  const tEl = document.getElementById('unpaidTableWrap');
+  if (!unpaidPm.length) { tEl.innerHTML = empty('Semua tagihan sudah lunas! 🎉'); return; }
+  tEl.innerHTML = buildPaymentsTable(unpaidPm);
+}
+
+// ── RENDER: ROOMS ──────────────────────────────────────────────
+function renderRooms() {
+  const el = document.getElementById('roomsTableWrap');
+  if (!allRooms.length) { el.innerHTML = empty(); return; }
+  const sorted = [...allRooms].sort((a,b) => (a.roomNumber||'').localeCompare(b.roomNumber||''));
+  let html = `<table><thead><tr>
+    <th>No. Kamar</th><th>Tipe</th><th>Harga/Bulan</th><th>Status</th><th>Penyewa Saat Ini</th>
+  </tr></thead><tbody>`;
+  sorted.forEach(r => {
+    const tenant = allTenants.find(t => t.roomId === r.id || t.roomId === r.roomNumber);
+    html += `<tr>
+      <td><strong>${r.roomNumber||r.id}</strong></td>
+      <td><span style="text-transform:capitalize">${r.type||'—'}</span></td>
+      <td class="currency">${r.price ? fmt(r.price) : '—'}</td>
+      <td>${statusBadge(r.status||'available')}</td>
+      <td>${tenant ? `<div class="tenant-row-name">${tenant.name}</div><div class="tenant-row-id mono">${tenant.phone||''}</div>` : '<span style="color:var(--ink-muted);font-size:.75rem">Kosong</span>'}</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
+// ── RENDER: TENANTS ────────────────────────────────────────────
+function renderTenants() {
+  const el = document.getElementById('tenantsTableWrap');
+  if (!allTenants.length) { el.innerHTML = empty('Belum ada penyewa terdaftar.'); return; }
+  let html = `<table><thead><tr>
+    <th>Nama</th><th>No. KTP</th><th>Telepon</th><th>Kamar</th><th>Mulai Sewa</th><th>Akhir Sewa</th>
+  </tr></thead><tbody>`;
+  allTenants.forEach(t => {
+    html += `<tr>
+      <td><div class="tenant-row-name">${t.name||'—'}</div></td>
+      <td class="mono">${t.ktpNumber||'—'}</td>
+      <td class="mono">${t.phone||'—'}</td>
+      <td><strong>${t.roomId||'—'}</strong></td>
+      <td>${fmtDate(t.startDate)}</td>
+      <td>${fmtDate(t.endDate)}</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
+// ── RENDER: PAYMENTS ───────────────────────────────────────────
+function buildPaymentsTable(data) {
+  if (!data.length) return empty();
+  let html = `<table><thead><tr>
+    <th>Penyewa</th><th>Bulan</th><th>Jumlah</th><th>Status</th><th>Dibayar Pada</th>
+  </tr></thead><tbody>`;
+  data.forEach(p => {
+    const tenant = allTenants.find(t => t.id === p.tenantId);
+    html += `<tr>
+      <td><div class="tenant-row-name">${tenant?.name||p.tenantId}</div></td>
+      <td class="mono">${p.month||'—'}</td>
+      <td class="currency">${fmt(p.amount||0)}</td>
+      <td>${statusBadge(p.status||'unpaid')}</td>
+      <td>${fmtDate(p.paidAt)}</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  return html;
+}
+
+function renderPayments() {
+  const el = document.getElementById('paymentsTableWrap');
+  const sorted = [...allPayments].sort((a,b) => (a.month||'').localeCompare(b.month||''));
+  el.innerHTML = buildPaymentsTable(sorted);
+}
+
+// ── RENDER: MAINTENANCE ────────────────────────────────────────
+function renderMaintenance() {
+  const el = document.getElementById('maintTableWrap');
+  if (!allMaint.length) { el.innerHTML = empty('Tidak ada permintaan perawatan.'); return; }
+  const sorted = [...allMaint].sort((a,b) => {
+    const ta = a.createdAt?.toDate?.()?.getTime?.() || 0;
+    const tb = b.createdAt?.toDate?.()?.getTime?.() || 0;
+    return tb - ta;
+  });
+  let html = `<table><thead><tr>
+    <th>Kamar</th><th>Deskripsi</th><th>Prioritas</th><th>Status</th><th>Penyewa</th><th>Tanggal</th>
+  </tr></thead><tbody>`;
+  sorted.forEach(m => {
+    const tenant = allTenants.find(t => t.id === m.tenantId);
+    html += `<tr>
+      <td><strong>${m.roomId||'—'}</strong></td>
+      <td>${m.description||'—'}</td>
+      <td>${statusBadge(m.priority||'low')}</td>
+      <td>${statusBadge(m.status||'open')}</td>
+      <td>${tenant?.name||m.tenantId||'—'}</td>
+      <td class="mono" style="font-size:.72rem">${fmtDate(m.createdAt)}</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
+// ── SECTION NAV ────────────────────────────────────────────────
+const sections = { overview:'Dashboard Overview', rooms:'Daftar Kamar', tenants:'Penyewa', payments:'Pembayaran', maintenance:'Perawatan & Perbaikan' };
+
+function renderCurrentSection() {
+  const active = document.querySelector('.nav-item.active');
+  if (!active) return;
+  const sec = active.getAttribute('onclick').match(/showSection\('(\w+)'\)/)?.[1];
+  if (sec) showSection(sec);
+}
+
+window.showSection = function(sec) {
+  Object.keys(sections).forEach(s => {
+    document.getElementById(`sec-${s}`).style.display = s===sec ? '' : 'none';
+  });
+  document.querySelectorAll('.nav-item').forEach(el => {
+    el.classList.toggle('active', el.getAttribute('onclick')?.includes(sec));
+  });
+  document.getElementById('pageTitle').textContent = sections[sec] || sec;
+}
+
+init();
+</script>
 </body>
 </html>
