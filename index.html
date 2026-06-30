@@ -829,49 +829,65 @@ function clearForm() {
 
 // ── SAVE TENANT ────────────────────────────────────────────────
 window.saveTenant = async function() {
-  const name      = document.getElementById('fName').value.trim();
-  const roomVal   = document.getElementById('fRoomId').value;
-  const phone     = document.getElementById('fPhone').value.trim();
-  const ktpNumber = document.getElementById('fKtp').value.trim();
-  const email     = document.getElementById('fEmail').value.trim();
-  const notes     = document.getElementById('fNotes').value.trim();
-  const startRaw  = document.getElementById('fStartDate').value;
-  const endRaw    = document.getElementById('fEndDate').value;
-  const roomStatus= document.getElementById('fRoomStatus').value;
+  const name       = (document.getElementById('fName')?.value || '').trim();
+  const roomVal    = (document.getElementById('fRoomId')?.value || '').trim();
+  const phone      = (document.getElementById('fPhone')?.value || '').trim();
+  const ktpNumber  = (document.getElementById('fKtp')?.value || '').trim();
+  const email      = (document.getElementById('fEmail')?.value || '').trim();
+  const notes      = (document.getElementById('fNotes')?.value || '').trim();
+  const startRaw   = (document.getElementById('fStartDate')?.value || '').trim();
+  const endRaw     = (document.getElementById('fEndDate')?.value || '').trim();
+  const roomStatus = document.getElementById('fRoomStatus')?.value || 'occupied';
 
-  if (!name)    { showToast('Nama penyewa harus diisi.', 'error'); return; }
-  if (!roomVal) { showToast('Pilih nomor kamar terlebih dahulu.', 'error'); return; }
-  if (!phone)   { showToast('Nomor telepon harus diisi.', 'error'); return; }
-  if (!startRaw){ showToast('Tanggal mulai sewa harus diisi.', 'error'); return; }
+  // Validasi
+  if (!name)           { showToast('Nama penyewa harus diisi.', 'error'); return; }
+  if (!roomVal)        { showToast('Pilih nomor kamar terlebih dahulu.', 'error'); return; }
+  if (!phone)          { showToast('Nomor telepon harus diisi.', 'error'); return; }
+  if (!startRaw)       { showToast('Tanggal mulai sewa harus diisi.', 'error'); return; }
+  if (!currentPropId)  { showToast('Properti belum dipilih.', 'error'); return; }
 
   const btn = document.getElementById('btnSaveTenant');
   btn.disabled = true;
   btn.textContent = 'Menyimpan…';
 
   try {
-    let roomId = roomVal;
-    let roomDocId = null;
+    let roomId    = roomVal;
+    let roomDocId = roomVal;
 
-    // If new room number selected (not in Firestore yet), create room doc first
-    if (roomVal.startsWith('__new__')) {
-      const newRoomNumber = roomVal.replace('__new__', '');
-      const roomRef = await addDoc(collection(db, 'properties', currentPropId, 'rooms'), {
-        roomNumber: newRoomNumber,
-        status: roomStatus,
-        type: 'standard',
-        price: 0,
-        createdAt: serverTimestamp()
-      });
+    const isNewRoom = roomVal.startsWith('__new__');
+
+    if (isNewRoom) {
+      // Kamar belum ada di Firestore — buat dulu
+      const newRoomNumber = roomVal.slice(7); // hapus prefix '__new__'
+      const roomRef = await addDoc(
+        collection(db, 'properties', currentPropId, 'rooms'),
+        {
+          roomNumber: newRoomNumber,
+          status:     roomStatus,
+          type:       'standard',
+          price:      0,
+          createdAt:  serverTimestamp(),
+        }
+      );
       roomDocId = roomRef.id;
-      roomId = roomRef.id;
+      roomId    = roomRef.id;
     } else {
-      roomDocId = roomVal;
-      // Update room status
+      // Kamar sudah ada — update statusnya saja
       try {
-        await updateDoc(doc(db, 'properties', currentPropId, 'rooms', roomDocId), {
-          status: roomStatus
-        });
-      } catch(e) {}
+        await updateDoc(
+          doc(db, 'properties', currentPropId, 'rooms', roomDocId),
+          { status: roomStatus }
+        );
+      } catch (e) {
+        console.warn('Gagal update status kamar:', e.message);
+      }
+    }
+
+    // Konversi tanggal dengan aman
+    function toTimestamp(raw) {
+      if (!raw) return null;
+      const d = new Date(raw);
+      return isNaN(d.getTime()) ? null : Timestamp.fromDate(d);
     }
 
     const tenantData = {
@@ -883,9 +899,9 @@ window.saveTenant = async function() {
       roomId,
       PropertyId: currentPropId,
       propertyId: currentPropId,
-      startDate: startRaw ? Timestamp.fromDate(new Date(startRaw)) : null,
-      endDate:   endRaw   ? Timestamp.fromDate(new Date(endRaw))   : null,
-      updatedAt: serverTimestamp()
+      startDate:  toTimestamp(startRaw),
+      endDate:    toTimestamp(endRaw),
+      updatedAt:  serverTimestamp(),
     };
 
     if (editingTenantId) {
@@ -900,9 +916,9 @@ window.saveTenant = async function() {
     closeTenantModal();
     await loadPropertyData(currentPropId);
 
-  } catch(e) {
-    console.error(e);
-    showToast('Gagal menyimpan: ' + e.message, 'error');
+  } catch (e) {
+    console.error('saveTenant error:', e);
+    showToast('Gagal menyimpan: ' + (e.message || 'Unknown error'), 'error');
   } finally {
     btn.disabled = false;
     btn.textContent = '💾 Simpan Penyewa';
