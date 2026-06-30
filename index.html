@@ -839,55 +839,63 @@ window.saveTenant = async function() {
   const endRaw     = (document.getElementById('fEndDate')?.value || '').trim();
   const roomStatus = document.getElementById('fRoomStatus')?.value || 'occupied';
 
-  // Validasi
-  if (!name)           { showToast('Nama penyewa harus diisi.', 'error'); return; }
-  if (!roomVal)        { showToast('Pilih nomor kamar terlebih dahulu.', 'error'); return; }
-  if (!phone)          { showToast('Nomor telepon harus diisi.', 'error'); return; }
-  if (!startRaw)       { showToast('Tanggal mulai sewa harus diisi.', 'error'); return; }
-  if (!currentPropId)  { showToast('Properti belum dipilih.', 'error'); return; }
+  // Validasi input
+  if (!name)          { showToast('Nama penyewa harus diisi.', 'error'); return; }
+  if (!roomVal)       { showToast('Pilih nomor kamar terlebih dahulu.', 'error'); return; }
+  if (!phone)         { showToast('Nomor telepon harus diisi.', 'error'); return; }
+  if (!startRaw)      { showToast('Tanggal mulai sewa harus diisi.', 'error'); return; }
+  if (!currentPropId) { showToast('Properti belum dipilih, coba refresh halaman.', 'error'); return; }
 
   const btn = document.getElementById('btnSaveTenant');
   btn.disabled = true;
   btn.textContent = 'Menyimpan…';
 
-  try {
-    let roomId    = roomVal;
-    let roomDocId = roomVal;
+  // Helper konversi tanggal aman
+  function toTimestamp(raw) {
+    if (!raw) return null;
+    try {
+      // raw dari <input type="date"> = "YYYY-MM-DD"
+      // Tambah noon agar tidak kena timezone shift
+      const d = new Date(raw + 'T12:00:00');
+      return isNaN(d.getTime()) ? null : Timestamp.fromDate(d);
+    } catch { return null; }
+  }
 
+  try {
     const isNewRoom = roomVal.startsWith('__new__');
 
-    if (isNewRoom) {
-      // Kamar belum ada di Firestore — buat dulu
-      const newRoomNumber = roomVal.slice(7); // hapus prefix '__new__'
-      const roomRef = await addDoc(
-        collection(db, 'properties', currentPropId, 'rooms'),
-        {
-          roomNumber: newRoomNumber,
-          status:     roomStatus,
-          type:       'standard',
-          price:      0,
-          createdAt:  serverTimestamp(),
-        }
-      );
-      roomDocId = roomRef.id;
-      roomId    = roomRef.id;
-    } else {
-      // Kamar sudah ada — update statusnya saja
-      try {
-        await updateDoc(
-          doc(db, 'properties', currentPropId, 'rooms', roomDocId),
-          { status: roomStatus }
-        );
-      } catch (e) {
-        console.warn('Gagal update status kamar:', e.message);
-      }
-    }
+    // Tentukan roomNumber dan roomId yang akan disimpan ke tenant
+    let roomNumber = '';
+    let roomDocId  = '';
 
-    // Konversi tanggal dengan aman
-    function toTimestamp(raw) {
-      if (!raw) return null;
-      const d = new Date(raw);
-      return isNaN(d.getTime()) ? null : Timestamp.fromDate(d);
+    if (isNewRoom) {
+      // Nomor kamar baru yang diketik (misal A-01) — belum ada doc-nya
+      roomNumber = roomVal.slice(7); // strip '__new__'
+
+      // Coba buat room doc di subcollection, tapi jangan sampai blokirsave tenant
+      try {
+        const roomRef = await addDoc(
+          collection(db, 'properties', currentPropId, 'rooms'),
+          { roomNumber, status: roomStatus, type: 'standard', price: 0, createdAt: serverTimestamp() }
+        );
+        roomDocId = roomRef.id;
+      } catch (roomErr) {
+        console.warn('Tidak bisa buat room doc (rules?):', roomErr.message);
+        // Tetap lanjut simpan tenant pakai roomNumber sebagai roomId
+        roomDocId = roomNumber;
+      }
+    } else {
+      // Kamar existing dari Firestore — roomVal = doc ID
+      roomDocId = roomVal;
+      const existingRoom = allRooms.find(r => r.id === roomVal);
+      roomNumber = existingRoom?.roomNumber || roomVal;
+
+      // Update status kamar (opsional, jangan gagalkan proses)
+      try {
+        await updateDoc(doc(db, 'properties', currentPropId, 'rooms', roomDocId), { status: roomStatus });
+      } catch (e) {
+        console.warn('Tidak bisa update status kamar:', e.message);
+      }
     }
 
     const tenantData = {
@@ -896,7 +904,8 @@ window.saveTenant = async function() {
       phone,
       email,
       notes,
-      roomId,
+      roomId:     roomDocId,    // doc ID kamar (atau roomNumber jika gagal buat doc)
+      roomNumber: roomNumber,   // simpan juga nomor kamar sebagai string untuk tampilan
       PropertyId: currentPropId,
       propertyId: currentPropId,
       startDate:  toTimestamp(startRaw),
@@ -906,11 +915,11 @@ window.saveTenant = async function() {
 
     if (editingTenantId) {
       await updateDoc(doc(db, 'tenants', editingTenantId), tenantData);
-      showToast(`Data ${name} berhasil diperbarui.`);
+      showToast(`✅ Data ${name} berhasil diperbarui.`);
     } else {
       tenantData.createdAt = serverTimestamp();
       await addDoc(collection(db, 'tenants'), tenantData);
-      showToast(`Penyewa ${name} berhasil ditambahkan.`);
+      showToast(`✅ Penyewa ${name} berhasil ditambahkan.`);
     }
 
     closeTenantModal();
@@ -918,7 +927,14 @@ window.saveTenant = async function() {
 
   } catch (e) {
     console.error('saveTenant error:', e);
-    showToast('Gagal menyimpan: ' + (e.message || 'Unknown error'), 'error');
+    // Tampilkan pesan error Firestore yang lebih spesifik
+    let msg = e.message || 'Terjadi kesalahan.';
+    if (msg.includes('permission-denied') || msg.includes('PERMISSION_DENIED')) {
+      msg = 'Akses ditolak Firestore. Periksa Security Rules database.';
+    } else if (msg.includes('not-found') || msg.includes('NOT_FOUND')) {
+      msg = 'Dokumen tidak ditemukan. Pastikan properti sudah ada di Firestore.';
+    }
+    showToast('Gagal menyimpan: ' + msg, 'error');
   } finally {
     btn.disabled = false;
     btn.textContent = '💾 Simpan Penyewa';
@@ -1130,7 +1146,11 @@ function renderRooms() {
     <th>No. Kamar</th><th>Tipe</th><th>Harga/Bulan</th><th>Status</th><th>Penyewa</th><th>Telepon</th><th>Masa Sewa</th><th style="text-align:center">Aksi</th>
   </tr></thead><tbody>`;
   sorted.forEach(r => {
-    const tenant = allTenants.find(t => t.roomId === r.id || t.roomId === r.roomNumber);
+    const tenant = allTenants.find(t =>
+      t.roomId === r.id ||
+      t.roomId === r.roomNumber ||
+      t.roomNumber === r.roomNumber
+    );
     html += `<tr>
       <td><strong>${r.roomNumber||r.id}</strong></td>
       <td style="text-transform:capitalize">${r.type||'—'}</td>
